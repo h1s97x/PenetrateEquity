@@ -1,0 +1,272 @@
+import { DataGenerator } from '@/utils/dataGenerator.js'
+import { v2DataLoader } from '@/adapters/v2DataAdapter.js'
+
+// API 缓存
+const apiCache = new Map()
+const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
+
+// 数据模式配置
+export const DATA_MODE = {
+  MOCK: 'mock',           // 使用简单模拟数据
+  GENERATOR: 'generator', // 使用数据生成器
+  V2: 'v2',               // 使用 V2 实验数据 ⭐ 新增
+  API: 'api'              // 使用真实 API
+}
+
+// 当前数据模式（可以通过环境变量配置）
+// 在 .env 文件中设置: VITE_DATA_MODE=v2
+const CURRENT_MODE = import.meta.env.VITE_DATA_MODE || DATA_MODE.V2
+
+console.log('当前数据模式:', CURRENT_MODE)
+
+/**
+ * 生成缓存键
+ */
+function getCacheKey(params) {
+  return `${params.companyCreditCode || ''}_${params.companyName || ''}_${params.type || 0}`
+}
+
+/**
+ * 获取缓存数据
+ */
+function getCache(key) {
+  const cached = apiCache.get(key)
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data
+  }
+  apiCache.delete(key)
+  return null
+}
+
+/**
+ * 设置缓存数据
+ */
+function setCache(key, data) {
+  apiCache.set(key, {
+    data,
+    timestamp: Date.now()
+  })
+}
+
+/**
+ * 清除所有缓存
+ */
+export function clearCache() {
+  apiCache.clear()
+}
+
+/**
+ * 使用 V2 实验数据
+ */
+async function generateV2Data(params) {
+  try {
+    // 如果是懒加载子节点
+    if (params.type === '1' || params.type === '2') {
+      const direction = params.type === '1' ? 'upward' : 'downward'
+      const nodeId = params.companyCode || params.companyCreditCode
+      return await v2DataLoader.getChildrenData(nodeId, direction)
+    }
+
+    // 初始加载根节点
+    return await v2DataLoader.getRootData()
+  } catch (error) {
+    console.error('V2 数据加载失败:', error)
+    // 降级到生成器模式
+    return generateMockDataWithGenerator(params)
+  }
+}
+
+/**
+ * 使用数据生成器生成数据
+ */
+function generateMockDataWithGenerator(params) {
+  // 根据 type 参数决定生成什么数据
+  if (params.type === '1' || params.type === '2') {
+    // 懒加载子节点
+    return {
+      code: 1,
+      retInfo: {
+        main: {
+          name: params.companyName || '示例科技有限公司',
+          companyCreditCode: params.companyCreditCode || '91310000123456789X'
+        },
+        upward: params.type === '1' ? DataGenerator.generateUpwardNodes(2, 3, 1) : [],
+        downward: params.type === '2' ? DataGenerator.generateDownwardNodes(2, 5, 1) : []
+      }
+    }
+  }
+
+  // 初始加载 - 使用预设场景
+  // 可选场景: 'simple', 'medium', 'complex', 'deep', 'wide'
+  const scenario = params.scenario || 'complex'
+  const treeData = DataGenerator.generateScenario(scenario)
+  
+  return {
+    code: 1,
+    retInfo: {
+      main: {
+        name: treeData.name,
+        companyCreditCode: treeData.companyCreditCode,
+        companyCode: treeData.companyCode,
+        amount: treeData.amount
+      },
+      upward: treeData.parents || [],
+      downward: treeData.children || []
+    }
+  }
+}
+
+/**
+ * 生成简单的模拟数据
+ */
+function generateSimpleMockData(params) {
+  const mockData = {
+    code: 1,
+    retInfo: {
+      main: {
+        name: params.companyName || '示例科技有限公司',
+        companyCreditCode: params.companyCreditCode || '91310000123456789X'
+      },
+      upward: [
+        {
+          name: '张三',
+          percent: '60.00',
+          amount: '600',
+          type: 1,
+          id: 'person001',
+          companyCreditCode: '',
+          companyCode: 'person001',
+          status: 1
+        },
+        {
+          name: '李四投资有限公司',
+          percent: '40.00',
+          amount: '400',
+          type: 2,
+          id: 'company001',
+          companyCreditCode: '91310000987654321Y',
+          companyCode: 'company001',
+          status: 1
+        }
+      ],
+      downward: [
+        {
+          name: '子公司A科技有限公司',
+          percent: '100.00',
+          amount: '1000',
+          type: 2,
+          id: 'sub001',
+          companyCreditCode: '91310000111111111A',
+          companyCode: 'sub001',
+          status: 1
+        },
+        {
+          name: '子公司B网络科技',
+          percent: '51.00',
+          amount: '510',
+          type: 2,
+          id: 'sub002',
+          companyCreditCode: '91310000222222222B',
+          companyCode: 'sub002',
+          status: 1
+        }
+      ]
+    }
+  }
+
+  // 如果是请求子节点数据
+  if (params.type === '1') {
+    // 向上查询股东
+    mockData.retInfo.upward = [
+      {
+        name: '王五',
+        percent: '80.00',
+        amount: '800',
+        type: 1,
+        id: 'person002',
+        companyCreditCode: '',
+        companyCode: 'person002',
+        status: 0
+      }
+    ]
+  } else if (params.type === '2') {
+    // 向下查询投资
+    mockData.retInfo.downward = [
+      {
+        name: '孙公司C',
+        percent: '100.00',
+        amount: '500',
+        type: 2,
+        id: 'subsub001',
+        companyCreditCode: '91310000333333333C',
+        companyCode: 'subsub001',
+        status: 0
+      }
+    ]
+  }
+
+  return mockData
+}
+
+/**
+ * 模拟股权穿透图表 API
+ * @param {Object} params - 查询参数
+ * @param {String} params.companyName - 公司名称
+ * @param {String} params.companyCreditCode - 统一社会信用代码
+ * @param {String} params.type - 查询类型: '0'-初始, '1'-向上, '2'-向下
+ * @param {String} params.scenario - 场景名称 (仅 GENERATOR 模式): 'simple', 'medium', 'complex', 'deep', 'wide'
+ * @returns {Promise<Object>} API 响应
+ */
+export async function getCompanyShareholder(params) {
+  // 检查缓存
+  const cacheKey = getCacheKey(params)
+  const cached = getCache(cacheKey)
+  if (cached) {
+    console.log('✅ 使用缓存数据:', cacheKey)
+    return Promise.resolve(cached)
+  }
+
+  // V2 模式需要异步处理
+  if (CURRENT_MODE === DATA_MODE.V2) {
+    console.log('📊 使用 V2 实验数据')
+    const mockData = await generateV2Data(params)
+    setCache(cacheKey, mockData)
+    return mockData
+  }
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      let mockData
+
+      // 根据配置的数据模式返回不同的数据
+      if (CURRENT_MODE === DATA_MODE.GENERATOR) {
+        console.log('🎲 使用数据生成器')
+        mockData = generateMockDataWithGenerator(params)
+      } else if (CURRENT_MODE === DATA_MODE.API) {
+        console.log('🌐 使用真实 API (未实现，降级到模拟数据)')
+        mockData = generateSimpleMockData(params)
+      } else {
+        console.log('📝 使用简单模拟数据')
+        mockData = generateSimpleMockData(params)
+      }
+
+      // 设置缓存
+      setCache(cacheKey, mockData)
+      
+      resolve(mockData)
+    }, 300)
+  })
+}
+
+/**
+ * 切换数据模式（用于测试）
+ */
+export function setDataMode(mode) {
+  if (Object.values(DATA_MODE).includes(mode)) {
+    console.log('切换数据模式:', mode)
+    // 注意：这只是临时切换，刷新页面后会恢复
+    // 要永久切换，需要修改 .env 文件
+    return true
+  }
+  return false
+}
