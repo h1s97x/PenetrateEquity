@@ -344,47 +344,15 @@ export function useEquityChart(options = {}) {
   /**
    * 节点展开/折叠（单个节点）
    */
-  const toggleNode = async (node) => {
+  const toggleNode = (node) => {
     if (node.children) {
-      // 折叠：隐藏子节点
+      // 折叠
       node._children = node.children
       node.children = null
-    } else if (node._children) {
-      // 展开：显示子节点
-      
-      // 如果未加载，先懒加载
-      if (!lazyLoader.isNodeLoaded(node.data.id)) {
-        const direction = node.data.direction || 'downward'
-        const children = await lazyLoader.lazyLoadNode(node, direction)
-        
-        if (children && children.length > 0) {
-          // 将子节点数据添加到 node.data
-          if (direction === 'downward') {
-            node.data.children = children
-          } else {
-            node.data.parents = children
-          }
-          
-          // 重新创建层次结构
-          const accessor = direction === 'downward' ? d => d.children : d => d.parents
-          const newHierarchy = d3.hierarchy(node.data, accessor)
-          
-          // 更新 _children，保持折叠状态
-          if (newHierarchy.children) {
-            newHierarchy.children.forEach(child => {
-              child._children = child.children
-              child.children = null
-            })
-            node._children = newHierarchy.children
-          }
-        }
-      }
-      
-      // 只展开当前节点，不展开子节点
+    } else {
+      // 展开
       node.children = node._children
-      // 不要设置 node._children = null，保持引用以便折叠
     }
-    
     update(node)
   }
 
