@@ -218,7 +218,7 @@ export class V2DataLoader {
 
     try {
       // 动态导入 V2 数据
-      const module = await import('../../equity-penetration-chart-v2-master/实验数据.js')
+      const module = await import('../../reference/equity-penetration-chart-v2-master/实验数据.js')
       this.data = module.data || module.default
       this.loaded = true
       
