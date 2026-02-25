@@ -342,45 +342,55 @@ export function useEquityChart(options = {}) {
   }
 
   /**
-   * 节点展开/折叠（集成懒加载）
+   * 节点展开/折叠（单个节点）
    */
   const toggleNode = async (node) => {
     if (node.children) {
-      // 折叠
+      // 折叠：隐藏子节点
       node._children = node.children
       node.children = null
-    } else {
-      // 展开
-      if (node._children) {
-        // 如果未加载，先懒加载
-        if (!lazyLoader.isNodeLoaded(node.data.id)) {
-          const direction = node.data.direction || 'downward'
-          const children = await lazyLoader.lazyLoadNode(node, direction)
-          
-          if (children && children.length > 0) {
-            // 将子节点数据转换为层次结构
+    } else if (node._children) {
+      // 展开：显示子节点
+      
+      // 如果未加载，先懒加载
+      if (!lazyLoader.isNodeLoaded(node.data.id)) {
+        const direction = node.data.direction || 'downward'
+        const children = await lazyLoader.lazyLoadNode(node, direction)
+        
+        if (children && children.length > 0) {
+          // 将子节点数据添加到 node.data
+          if (direction === 'downward') {
             node.data.children = children
-            node.data.parents = []
-            
-            // 重新创建层次结构
-            if (direction === 'downward') {
-              const newHierarchy = d3.hierarchy(node.data, d => d.children)
-              node._children = newHierarchy.children
-            } else {
-              const newHierarchy = d3.hierarchy(node.data, d => d.parents)
-              node._children = newHierarchy.children
-            }
+          } else {
+            node.data.parents = children
+          }
+          
+          // 重新创建层次结构
+          const accessor = direction === 'downward' ? d => d.children : d => d.parents
+          const newHierarchy = d3.hierarchy(node.data, accessor)
+          
+          // 更新 _children，保持折叠状态
+          if (newHierarchy.children) {
+            newHierarchy.children.forEach(child => {
+              child._children = child.children
+              child.children = null
+            })
+            node._children = newHierarchy.children
           }
         }
-        
-        node.children = node._children
-        node._children = null
       }
+      
+      // 只展开当前节点，不展开子节点
+      node.children = node._children
+      // 不要设置 node._children = null，保持引用以便折叠
     }
+    
     update(node)
   }
 
   /**
+   * 展开所有节点
+   */  /**
    * 展开所有节点
    */
   const expandAll = () => {

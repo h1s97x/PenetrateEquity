@@ -6,12 +6,31 @@ import { MARKER_CONFIG } from './constants'
  */
 export function useLinks(gLinks, config) {
   /**
-   * 绘制直角连接线
+   * 绘制直角连接线（从节点边缘开始）
    */
   const drawLink = ({ source, target }) => {
-    const halfDistance = (target.y - source.y) / 2
-    const halfY = source.y + halfDistance
-    return `M${source.x},${source.y} L${source.x},${halfY} ${target.x},${halfY} ${target.x},${target.y}`
+    // 计算起点和终点，考虑节点高度
+    const sourceY = source.y + (config.rectHeight / 2) + 5  // 从节点底部开始，留5px间隙
+    const targetY = target.y - (config.rectHeight / 2) - 5  // 到节点顶部，留5px间隙
+    
+    const halfDistance = (targetY - sourceY) / 2
+    const halfY = sourceY + halfDistance
+    
+    return `M${source.x},${sourceY} L${source.x},${halfY} ${target.x},${halfY} ${target.x},${targetY}`
+  }
+
+  /**
+   * 绘制向上的连接线（从节点边缘开始）
+   */
+  const drawUpwardLink = ({ source, target }) => {
+    // 向上的连接线，方向相反
+    const sourceY = source.y - (config.rectHeight / 2) - 5  // 从节点顶部开始
+    const targetY = target.y + (config.rectHeight / 2) + 5  // 到节点底部
+    
+    const halfDistance = (targetY - sourceY) / 2
+    const halfY = sourceY + halfDistance
+    
+    return `M${source.x},${sourceY} L${source.x},${halfY} ${target.x},${halfY} ${target.x},${targetY}`
   }
 
   /**
@@ -78,7 +97,7 @@ export function useLinks(gLinks, config) {
           source: { x: source.x0, y: source.y0 },
           target: { x: source.x0, y: source.y0 }
         }
-        return drawLink(o)
+        return drawUpwardLink(o)
       })
       .attr('fill', 'none')
       .attr('stroke', '#9DA8BA')
@@ -89,7 +108,7 @@ export function useLinks(gLinks, config) {
     // Update
     link.merge(linkEnter)
       .transition(transition)
-      .attr('d', drawLink)
+      .attr('d', drawUpwardLink)
       .style('opacity', 1)
 
     // Exit
@@ -100,7 +119,7 @@ export function useLinks(gLinks, config) {
           source: { x: source.x, y: source.y },
           target: { x: source.x, y: source.y }
         }
-        return drawLink(o)
+        return drawUpwardLink(o)
       })
       .style('opacity', 0)
       .remove()

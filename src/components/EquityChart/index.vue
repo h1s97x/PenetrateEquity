@@ -1,5 +1,15 @@
 <template>
   <div class="equity-chart-container">
+    <!-- 工具栏 -->
+    <div class="toolbar">
+      <button @click="handleExpandAll" class="toolbar-btn">
+        <span>📂</span> 全部展开
+      </button>
+      <button @click="handleCollapseAll" class="toolbar-btn">
+        <span>📁</span> 全部折叠
+      </button>
+    </div>
+
     <!-- 性能监控面板 -->
     <div v-if="showPerformance" class="performance-panel">
       <div class="perf-item">
@@ -207,6 +217,24 @@ const startPerformanceMonitoring = (getMetrics, getStats) => {
 /**
  * 监听属性变化
  */
+/**
+ * 全部展开
+ */
+const handleExpandAll = () => {
+  if (chartInstance) {
+    chartInstance.expandAll()
+  }
+}
+
+/**
+ * 全部折叠
+ */
+const handleCollapseAll = () => {
+  if (chartInstance) {
+    chartInstance.collapseAll()
+  }
+}
+
 watch(() => props.companyName, () => {
   getData()
 })
@@ -237,6 +265,46 @@ onBeforeUnmount(() => {
   background: #F5F6F9;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.toolbar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.toolbar-btn:hover {
+  background: #6f90fb;
+  color: white;
+  border-color: #6f90fb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(111, 144, 251, 0.3);
+}
+
+.toolbar-btn:active {
+  transform: translateY(0);
+}
+
+.toolbar-btn span {
+  font-size: 16px;
 }
 
 .performance-panel {
