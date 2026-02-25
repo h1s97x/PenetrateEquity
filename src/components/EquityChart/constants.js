@@ -1,12 +1,12 @@
 // 图表配置常量
 export const CHART_CONFIG = {
   // 节点间距
-  dx: 130,
-  dy: 90,
+  dx: 150,
+  dy: 100,
   
   // 节点尺寸
-  rectWidth: 120,
-  rectHeight: 80,
+  rectWidth: 160,
+  rectHeight: 95,
   rootRectHeight: 45,
   
   // 动画配置

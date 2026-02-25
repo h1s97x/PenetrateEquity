@@ -6,6 +6,91 @@ import { NODE_COLORS, CHART_CONFIG } from './constants'
  */
 export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
   let nodeId = 0
+  let tooltip = null
+
+  /**
+   * 创建悬浮提示框
+   */
+  const createTooltip = () => {
+    if (!tooltip) {
+      tooltip = d3.select('body')
+        .append('div')
+        .attr('class', 'equity-chart-tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', 'white')
+        .style('border', '1px solid #ddd')
+        .style('border-radius', '8px')
+        .style('padding', '12px')
+        .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
+        .style('z-index', '10000')
+        .style('max-width', '300px')
+        .style('font-size', '14px')
+        .style('pointer-events', 'none')
+    }
+    return tooltip
+  }
+
+  /**
+   * 显示悬浮提示
+   */
+  const showTooltip = (event, d) => {
+    const tip = createTooltip()
+    
+    let html = `
+      <div style="margin-bottom: 8px; font-weight: bold; color: #333; font-size: 15px;">
+        ${d.data.name}
+      </div>
+    `
+    
+    if (d.depth !== 0 && d.data.ratio) {
+      html += `
+        <div style="margin-bottom: 4px; color: #666;">
+          <span style="color: #999;">持股比例：</span>
+          <span style="color: #6f90fb; font-weight: 500;">${d.data.ratio}</span>
+        </div>
+      `
+    }
+    
+    if (d.data.amount && d.data.amount !== '0') {
+      html += `
+        <div style="margin-bottom: 4px; color: #666;">
+          <span style="color: #999;">金额：</span>
+          <span>${d.data.amount} 万元</span>
+        </div>
+      `
+    }
+    
+    html += `
+      <div style="margin-bottom: 4px; color: #666;">
+        <span style="color: #999;">类型：</span>
+        <span>${d.data.type === 1 ? '个人' : '企业'}</span>
+      </div>
+    `
+    
+    if (d.data.companyCreditCode) {
+      html += `
+        <div style="color: #666; font-size: 12px;">
+          <span style="color: #999;">信用代码：</span>
+          <span>${d.data.companyCreditCode}</span>
+        </div>
+      `
+    }
+    
+    tip.html(html)
+      .style('visibility', 'visible')
+      .style('left', (event.pageX + 15) + 'px')
+      .style('top', (event.pageY - 10) + 'px')
+  }
+
+  /**
+   * 隐藏悬浮提示
+   */
+  const hideTooltip = () => {
+    if (tooltip) {
+      tooltip.style('visibility', 'hidden')
+    }
+  }
 
   /**
    * 渲染向下的节点（子公司）
@@ -28,6 +113,19 @@ export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
         if (d.depth !== 0) {
           onNodeClick?.(event, d)
         }
+      })
+      .on('mouseenter', (event, d) => {
+        showTooltip(event, d)
+      })
+      .on('mousemove', (event) => {
+        if (tooltip) {
+          tooltip
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 10) + 'px')
+        }
+      })
+      .on('mouseleave', () => {
+        hideTooltip()
       })
 
     // 绘制节点矩形
@@ -80,6 +178,19 @@ export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
       .style('display', d => d.depth === 0 ? 'none' : null)
       .on('click', (event, d) => {
         onNodeClick?.(event, d)
+      })
+      .on('mouseenter', (event, d) => {
+        showTooltip(event, d)
+      })
+      .on('mousemove', (event) => {
+        if (tooltip) {
+          tooltip
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 10) + 'px')
+        }
+      })
+      .on('mouseleave', () => {
+        hideTooltip()
       })
 
     // 绘制节点矩形
@@ -223,7 +334,7 @@ export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
    */
   function renderPercentBar(nodeEnter, direction) {
     const colors = direction === 'downward' ? NODE_COLORS.downward : NODE_COLORS.upward
-    const yOffset = direction === 'downward' ? 12 : 16
+    const yOffset = direction === 'downward' ? 15 : 18
 
     const percentG = nodeEnter
       .append('g')
@@ -231,13 +342,13 @@ export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
       .attr('transform', `translate(0, ${yOffset})`)
       .style('display', d => d.depth === 0 ? 'none' : null)
 
-    // 标签
+    // 标签和百分比值放在同一行，避免重叠
     percentG
       .append('text')
       .attr('fill', colors.textColor)
       .attr('x', -config.rectWidth / 2 + 12)
-      .style('font-size', '12px')
-      .text('持股比例')
+      .style('font-size', '11px')
+      .text('持股')
 
     // 百分比值
     percentG
@@ -245,29 +356,30 @@ export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
       .attr('fill', colors.textColor)
       .attr('text-anchor', 'end')
       .attr('x', config.rectWidth / 2 - 12)
-      .style('font-size', '13px')
+      .style('font-size', '12px')
+      .style('font-weight', '500')
       .text(d => d.depth !== 0 && d.data.ratio ? d.data.ratio : '')
 
-    const barWidth = config.rectWidth - 20
+    const barWidth = config.rectWidth - 24
 
     // 背景条
     percentG
       .append('rect')
       .attr('class', 'percent-bar-bg')
       .attr('fill', 'rgba(0,0,0,0.1)')
-      .attr('x', -config.rectWidth / 2 + 10)
-      .attr('y', 6)
+      .attr('x', -config.rectWidth / 2 + 12)
+      .attr('y', 8)
       .attr('width', barWidth)
-      .attr('height', 6)
-      .attr('rx', 3)
+      .attr('height', 5)
+      .attr('rx', 2.5)
 
     // 进度条
     percentG
       .append('rect')
       .attr('class', 'percent-bar-fill')
       .attr('fill', colors.percentBarColor)
-      .attr('x', -config.rectWidth / 2 + 10)
-      .attr('y', 6)
+      .attr('x', -config.rectWidth / 2 + 12)
+      .attr('y', 8)
       .attr('width', d => {
         if (d.data.ratio) {
           const percent = parseFloat(d.data.ratio.replace('%', ''))
@@ -275,8 +387,8 @@ export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
         }
         return 0
       })
-      .attr('height', 6)
-      .attr('rx', 3)
+      .attr('height', 5)
+      .attr('rx', 2.5)
   }
 
   /**

@@ -346,23 +346,36 @@ export function useEquityChart(options = {}) {
    */
   const toggleNode = async (node) => {
     if (node.children) {
+      // 折叠
       node._children = node.children
       node.children = null
     } else {
-      // 如果未加载，先懒加载
-      if (!lazyLoader.isNodeLoaded(node.data.id) && node._children) {
-        const direction = node.data.direction || 'downward'
-        const children = await lazyLoader.lazyLoadNode(node, direction)
-        
-        if (children && children.length > 0) {
-          node._children = children.map(child => ({
-            ...child,
-            direction
-          }))
+      // 展开
+      if (node._children) {
+        // 如果未加载，先懒加载
+        if (!lazyLoader.isNodeLoaded(node.data.id)) {
+          const direction = node.data.direction || 'downward'
+          const children = await lazyLoader.lazyLoadNode(node, direction)
+          
+          if (children && children.length > 0) {
+            // 将子节点数据转换为层次结构
+            node.data.children = children
+            node.data.parents = []
+            
+            // 重新创建层次结构
+            if (direction === 'downward') {
+              const newHierarchy = d3.hierarchy(node.data, d => d.children)
+              node._children = newHierarchy.children
+            } else {
+              const newHierarchy = d3.hierarchy(node.data, d => d.parents)
+              node._children = newHierarchy.children
+            }
+          }
         }
+        
+        node.children = node._children
+        node._children = null
       }
-      
-      node.children = node._children
     }
     update(node)
   }
