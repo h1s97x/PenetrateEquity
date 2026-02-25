@@ -275,64 +275,6 @@ export function useEquityChart(options = {}) {
   }
 
   /**
-   * 更新图表
-   */
-  const updateOld = (source) => {
-    if (!rootOfDown || !rootOfUp) return
-
-    // 计算节点位置
-    const nodesOfDown = rootOfDown.descendants().reverse()
-    const linksOfDown = rootOfDown.links()
-    const nodesOfUp = rootOfUp.descendants().reverse()
-    const linksOfUp = rootOfUp.links()
-
-    tree(rootOfDown)
-    tree(rootOfUp)
-
-    // 反转向上节点的 y 坐标
-    nodesOfUp.forEach(node => {
-      node.y = -node.y
-    })
-
-    // 创建过渡动画
-    const transition = svg.transition()
-      .duration(config.duration)
-      .ease(d3.easeCubicOut)
-
-    // 渲染节点和连接线
-    const { renderDownwardNodes, renderUpwardNodes } = useNodes(
-      gNodes, 
-      config, 
-      options.onNodeClick,
-      toggleNode
-    )
-    const { updateDownwardLinks, updateUpwardLinks } = useLinks(gLinks, config)
-
-    renderDownwardNodes(nodesOfDown, source, transition)
-    renderUpwardNodes(nodesOfUp, source, transition)
-    updateDownwardLinks(linksOfDown, source, transition)
-    updateUpwardLinks(linksOfUp, source, transition)
-
-    // 更新展开按钮状态
-    updateExpandButtons()
-
-    // 保存旧位置
-    rootOfDown.eachBefore(d => {
-      d.x0 = d.x
-      d.y0 = d.y
-    })
-    rootOfUp.eachBefore(d => {
-      d.x0 = d.x
-      d.y0 = d.y
-    })
-
-    // 居中到点击的节点
-    if (source.x !== undefined && source.y !== undefined) {
-      zoom.translateTo(source.x, source.y)
-    }
-  }
-
-  /**
    * 更新展开按钮
    */
   const updateExpandButtons = () => {
@@ -343,16 +285,23 @@ export function useEquityChart(options = {}) {
 
   /**
    * 节点展开/折叠（单个节点）
+   * 参考 V2 版本的简单实现
    */
-  const toggleNode = (node) => {
+  const toggleNode = (event, node) => {
+    // 阻止事件冒泡
+    if (event) {
+      event.stopPropagation()
+    }
+    
     if (node.children) {
-      // 折叠
+      // 折叠：将 children 移到 _children
       node._children = node.children
       node.children = null
     } else {
-      // 展开
+      // 展开：将 _children 移到 children
       node.children = node._children
     }
+    
     update(node)
   }
 

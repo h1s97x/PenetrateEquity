@@ -411,8 +411,7 @@ export function useNodes(gNodes, config, onNodeClick, onToggleNode) {
       })
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
-        event.stopPropagation() // 阻止事件冒泡到节点
-        onToggleNode?.(d)
+        onToggleNode?.(event, d)
       })
 
     // 圆形背景

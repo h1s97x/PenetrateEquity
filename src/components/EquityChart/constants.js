@@ -1,8 +1,8 @@
 // 图表配置常量
 export const CHART_CONFIG = {
   // 节点间距
-  dx: 150,
-  dy: 100,
+  dx: 200,
+  dy: 150,
   
   // 节点尺寸
   rectWidth: 160,
@@ -39,16 +39,16 @@ export const NODE_COLORS = {
 export const MARKER_CONFIG = {
   down: {
     id: 'markerDown',
-    refX: 38,
+    refX: 5,
     refY: 0,
-    orient: '90',
+    orient: 'auto',
     color: '#9DA8BA'
   },
   up: {
     id: 'markerUp',
-    refX: -32,
+    refX: 5,
     refY: 0,
-    orient: '90',
+    orient: 'auto',
     color: '#9DA8BA'
   }
 }

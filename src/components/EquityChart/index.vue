@@ -143,7 +143,8 @@ const drawChart = () => {
   
   const { 
     drawChart, 
-    toggleNode, 
+    expandAll,
+    collapseAll,
     getPerformanceMetrics,
     getLoadStats
   } = useEquityChart({
@@ -151,38 +152,24 @@ const drawChart = () => {
     onVisibleNodesChange: handleVisibleNodesChange
   })
 
-  chartInstance = drawChart(
+  const result = drawChart(
     chartRef.value,
     chartData.value,
     rect.width,
     props.height
   )
-
-  // 绑定展开按钮事件
-  bindExpandEvents(toggleNode)
+  
+  // 保存实例引用
+  chartInstance = {
+    ...result,
+    expandAll,
+    collapseAll
+  }
 
   // 启动性能监控更新
   if (props.showPerformance) {
     startPerformanceMonitoring(getPerformanceMetrics, getLoadStats)
   }
-}
-
-/**
- * 绑定展开按钮事件
- */
-const bindExpandEvents = (toggleNode) => {
-  const buttons = chartRef.value.querySelectorAll('.expand-btn')
-  buttons.forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation()
-      const nodeData = btn.__data__
-      if (nodeData) {
-        await toggleNode(nodeData)
-        // 重新绑定事件（因为 DOM 更新了）
-        setTimeout(() => bindExpandEvents(toggleNode), 100)
-      }
-    })
-  })
 }
 
 /**

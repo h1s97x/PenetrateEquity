@@ -6,7 +6,7 @@ import { MARKER_CONFIG } from './constants'
  */
 export function useLinks(gLinks, config) {
   /**
-   * 绘制直角连接线
+   * 绘制直角连接线（参考 V2 版本）
    */
   const drawLink = ({ source, target }) => {
     const halfDistance = (target.y - source.y) / 2
