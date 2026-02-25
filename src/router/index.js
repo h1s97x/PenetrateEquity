@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import EquityChartNew from '../components/EquityChart/index.vue'
+import Home from '../views/Home.vue'
+import EquityChartView from '../views/EquityChartView.vue'
 import Comparison from '../views/Comparison.vue'
 import PerformanceTest from '../views/PerformanceTest.vue'
 import V2DataTest from '../views/V2DataTest.vue'
@@ -8,12 +9,12 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    redirect: '/chart'
+    component: Home
   },
   {
     path: '/chart',
     name: 'EquityChart',
-    component: EquityChartNew
+    component: EquityChartView
   },
   {
     path: '/comparison',

@@ -9,15 +9,90 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
 export const DATA_MODE = {
   MOCK: 'mock',           // 使用简单模拟数据
   GENERATOR: 'generator', // 使用数据生成器
-  V2: 'v2',               // 使用 V2 实验数据 ⭐ 新增
+  V2: 'v2',               // 使用 V2 实验数据
   API: 'api'              // 使用真实 API
 }
 
 // 当前数据模式（可以通过环境变量配置）
-// 在 .env 文件中设置: VITE_DATA_MODE=v2
-const CURRENT_MODE = import.meta.env.VITE_DATA_MODE || DATA_MODE.V2
+const CURRENT_MODE = import.meta.env.VITE_DATA_MODE || DATA_MODE.GENERATOR
 
 console.log('当前数据模式:', CURRENT_MODE)
+
+/**
+ * 不同公司的数据配置
+ */
+const companyDataConfigs = {
+  '91310000123456789X': {
+    companyName: '京海控股集团有限公司',
+    downwardDepth: 3,
+    upwardDepth: 2,
+    childrenPerLevel: 4,
+    shareholderCount: 3
+  },
+  '91330000MA27XYZ123': {
+    companyName: '阿里巴巴集团控股有限公司',
+    downwardDepth: 4,
+    upwardDepth: 2,
+    childrenPerLevel: 8,
+    shareholderCount: 4
+  },
+  '91440300MA5ABC1234': {
+    companyName: '腾讯控股有限公司',
+    downwardDepth: 4,
+    upwardDepth: 2,
+    childrenPerLevel: 7,
+    shareholderCount: 3
+  },
+  '91110108MA01DEF567': {
+    companyName: '字节跳动科技有限公司',
+    downwardDepth: 3,
+    upwardDepth: 2,
+    childrenPerLevel: 6,
+    shareholderCount: 5
+  },
+  '91440300618520018E': {
+    companyName: '华为技术有限公司',
+    downwardDepth: 4,
+    upwardDepth: 1,
+    childrenPerLevel: 9,
+    shareholderCount: 2
+  },
+  '91110108551385082Q': {
+    companyName: '小米科技有限责任公司',
+    downwardDepth: 3,
+    upwardDepth: 2,
+    childrenPerLevel: 5,
+    shareholderCount: 4
+  },
+  '91110108MA00GHI890': {
+    companyName: '美团科技有限公司',
+    downwardDepth: 3,
+    upwardDepth: 2,
+    childrenPerLevel: 4,
+    shareholderCount: 4
+  },
+  '91110000633674814D': {
+    companyName: '京东集团股份有限公司',
+    downwardDepth: 4,
+    upwardDepth: 2,
+    childrenPerLevel: 6,
+    shareholderCount: 3
+  },
+  '91110000802100433B': {
+    companyName: '百度在线网络技术有限公司',
+    downwardDepth: 3,
+    upwardDepth: 2,
+    childrenPerLevel: 6,
+    shareholderCount: 2
+  },
+  '91330000MA27JKL456': {
+    companyName: '网易（杭州）网络有限公司',
+    downwardDepth: 3,
+    upwardDepth: 2,
+    childrenPerLevel: 4,
+    shareholderCount: 2
+  }
+}
 
 /**
  * 生成缓存键
@@ -80,6 +155,8 @@ async function generateV2Data(params) {
  * 使用数据生成器生成数据
  */
 function generateMockDataWithGenerator(params) {
+  const { companyCreditCode, companyName } = params
+  
   // 根据 type 参数决定生成什么数据
   if (params.type === '1' || params.type === '2') {
     // 懒加载子节点
@@ -87,8 +164,8 @@ function generateMockDataWithGenerator(params) {
       code: 1,
       retInfo: {
         main: {
-          name: params.companyName || '示例科技有限公司',
-          companyCreditCode: params.companyCreditCode || '91310000123456789X'
+          name: companyName || '示例科技有限公司',
+          companyCreditCode: companyCreditCode || '91310000123456789X'
         },
         upward: params.type === '1' ? DataGenerator.generateUpwardNodes(2, 3, 1) : [],
         downward: params.type === '2' ? DataGenerator.generateDownwardNodes(2, 5, 1) : []
@@ -96,22 +173,31 @@ function generateMockDataWithGenerator(params) {
     }
   }
 
-  // 初始加载 - 使用预设场景
-  // 可选场景: 'simple', 'medium', 'complex', 'deep', 'wide'
-  const scenario = params.scenario || 'complex'
-  const treeData = DataGenerator.generateScenario(scenario)
+  // 获取公司配置
+  const config = companyDataConfigs[companyCreditCode] || {
+    companyName: companyName || '示例科技有限公司',
+    downwardDepth: 3,
+    upwardDepth: 2,
+    childrenPerLevel: 5,
+    shareholderCount: 3
+  }
+  
+  // 生成数据
+  const treeData = DataGenerator.generateCompanyTree({
+    ...config,
+    companyCreditCode
+  })
   
   return {
     code: 1,
     retInfo: {
       main: {
-        name: treeData.name,
-        companyCreditCode: treeData.companyCreditCode,
-        companyCode: treeData.companyCode,
-        amount: treeData.amount
+        name: config.companyName,
+        companyCreditCode: companyCreditCode,
+        type: 2
       },
-      upward: treeData.parents || [],
-      downward: treeData.children || []
+      downward: treeData.children || [],
+      upward: treeData.parents || []
     }
   }
 }
@@ -214,7 +300,6 @@ function generateSimpleMockData(params) {
  * @param {String} params.companyName - 公司名称
  * @param {String} params.companyCreditCode - 统一社会信用代码
  * @param {String} params.type - 查询类型: '0'-初始, '1'-向上, '2'-向下
- * @param {String} params.scenario - 场景名称 (仅 GENERATOR 模式): 'simple', 'medium', 'complex', 'deep', 'wide'
  * @returns {Promise<Object>} API 响应
  */
 export async function getCompanyShareholder(params) {
@@ -264,8 +349,6 @@ export async function getCompanyShareholder(params) {
 export function setDataMode(mode) {
   if (Object.values(DATA_MODE).includes(mode)) {
     console.log('切换数据模式:', mode)
-    // 注意：这只是临时切换，刷新页面后会恢复
-    // 要永久切换，需要修改 .env 文件
     return true
   }
   return false
