@@ -1,5 +1,5 @@
-import { DataGenerator } from '@/utils/dataGenerator.js'
-import { v2DataLoader } from '@/adapters/v2DataAdapter.js'
+import { DataGenerator } from '@/data/generators/dataGenerator.js'
+import { v2DataLoader } from '@/data/adapters/v2DataAdapter.js'
 
 // API 缓存
 const apiCache = new Map()
