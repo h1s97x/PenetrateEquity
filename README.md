@@ -1,6 +1,15 @@
 # 股权穿透图可视化系统
 
+[![Deploy to GitHub Pages](https://github.com/h1s97x/PenetrateEquity/actions/workflows/deploy.yml/badge.svg)](https://github.com/h1s97x/PenetrateEquity/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 基于 D3.js v7 + Vue 3 的现代化股权穿透图可视化组件。
+
+## 🌐 在线演示
+
+**访问地址**: [https://h1s97x.github.io/PenetrateEquity/](https://h1s97x.github.io/PenetrateEquity/)
+
+> 每次推送到 main 分支会自动部署最新版本
 
 ## ✨ 特性
 
