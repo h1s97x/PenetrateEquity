@@ -50,7 +50,7 @@
 
 <script setup>
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
-import { useEquityChart } from './useEquityChart'
+import { useEquityChart } from './composables/useEquityChart'
 import { getCompanyShareholder } from '@/api/equityPenetrationChart/index'
 
 const props = defineProps({

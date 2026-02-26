@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { NODE_COLORS, CHART_CONFIG } from './constants'
+import { NODE_COLORS, CHART_CONFIG } from '../../../../lib/constants'
 
 /**
  * 节点渲染逻辑

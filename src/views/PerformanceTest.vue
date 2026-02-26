@@ -122,7 +122,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import EquityChart from '@/components/EquityChart/index.vue'
+import EquityChart from '@/components/ui/EquityChart/index.vue'
 
 const chartRef = ref(null)
 const testing = ref(false)

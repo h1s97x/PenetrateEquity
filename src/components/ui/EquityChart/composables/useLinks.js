@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { MARKER_CONFIG } from './constants'
+import { MARKER_CONFIG } from '../../../../lib/constants'
 
 /**
  * 连接线渲染逻辑

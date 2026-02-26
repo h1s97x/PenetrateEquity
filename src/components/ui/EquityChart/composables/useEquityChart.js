@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CHART_CONFIG, MARKER_CONFIG } from './constants'
+import { CHART_CONFIG, MARKER_CONFIG } from '../../../../lib/constants'
 import { useZoom } from './useZoom'
 import { useNodes } from './useNodes'
 import { useLinks } from './useLinks'
@@ -10,7 +10,7 @@ import {
   rafThrottle,
   calculateViewBox,
   isNodeInViewBox
-} from './utils/performance'
+} from '../../../../lib/utils/performance'
 
 /**
  * 股权穿透图核心逻辑

@@ -40,8 +40,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import EquityChart from '@/components/EquityChart/index.vue'
-import { v2DataLoader, V2DataAdapter } from '@/adapters/v2DataAdapter.js'
+import EquityChart from '@/components/ui/EquityChart/index.vue'
+import { v2DataLoader, V2DataAdapter } from '@/data/adapters/v2DataAdapter.js'
 
 const loaded = ref(false)
 const stats = ref(null)

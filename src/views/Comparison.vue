@@ -85,7 +85,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import EquityChart from '@/components/EquityChart/index.vue'
+import EquityChart from '@/components/ui/EquityChart/index.vue'
 
 const currentMode = ref('basic')
 const selectedNode = ref(null)

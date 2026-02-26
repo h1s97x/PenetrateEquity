@@ -59,7 +59,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import EquityChart from '@/components/EquityChart/index.vue'
+import EquityChart from '@/components/ui/EquityChart/index.vue'
 
 const router = useRouter()
 const route = useRoute()

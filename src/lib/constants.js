@@ -52,3 +52,43 @@ export const MARKER_CONFIG = {
     color: '#9DA8BA'
   }
 }
+// 搜索功能配置
+export const SEARCH_CONFIG = {
+  DEBOUNCE_DELAY: 300,
+  FUZZY_THRESHOLD: 0.6,
+  MAX_RESULTS: 20,
+  HIGHLIGHT_COLOR: '#ff6b6b',
+  HIGHLIGHT_DURATION: 300
+}
+
+// 路径高亮配置
+export const PATH_HIGHLIGHT_CONFIG = {
+  PATH_COLOR: '#4dabf7',
+  PATH_WIDTH: 3,
+  DIMMED_OPACITY: 0.2,
+  ANIMATION_DURATION: 300
+}
+
+// 图片导出配置
+export const EXPORT_CONFIG = {
+  BACKGROUND_COLOR: '#ffffff',
+  SCALE: 2,
+  QUALITY: 0.95,
+  FORMAT: 'png'
+}
+
+// 全屏模式配置
+export const FULLSCREEN_CONFIG = {
+  EXIT_BUTTON_POSITION: 'top-right',
+  SHOW_EXIT_BUTTON: true
+}
+
+// 缩略图导航配置
+export const MINIMAP_CONFIG = {
+  WIDTH: 200,
+  HEIGHT: 150,
+  POSITION: 'bottom-right',
+  BACKGROUND_COLOR: '#f8f9fa',
+  VIEWPORT_COLOR: '#4dabf7',
+  SIMPLIFY_THRESHOLD: 1000
+}
