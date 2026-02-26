@@ -173,9 +173,12 @@ export class V2DataAdapter {
     const shareholderNames = ['张三', '李四', '王五', '赵六', '钱七']
     const companyNames = ['投资公司A', '投资公司B', '投资公司C']
 
+    // 生成持股比例，确保总和为 100%
+    const ratios = this.generateRatiosSum100(shareholderCount)
+
     for (let i = 0; i < shareholderCount; i++) {
       const isPerson = Math.random() > 0.5
-      const ratio = (Math.random() * 50 + 10).toFixed(2)
+      const ratio = ratios[i]
 
       shareholders.push({
         id: `SHAREHOLDER_${i + 1}`,
@@ -183,18 +186,53 @@ export class V2DataAdapter {
           ? shareholderNames[i % shareholderNames.length]
           : companyNames[i % companyNames.length],
         ratio: `${ratio}%`,
-        amount: `${Math.floor(parseFloat(ratio) * 100)}`,
+        amount: `${Math.floor(ratio * 100)}`,
         type: isPerson ? 1 : 2,
         companyCreditCode: isPerson ? '' : `91000000000000${i}`,
         companyCode: `SHAREHOLDER_${i + 1}`,
         direction: 'upward',
-        status: 0,
-        children: null
+        status: !isPerson ? 1 : 0, // 企业股东可以继续穿透
+        parents: null // 向上穿透使用 parents
       })
     }
 
     treeData.parents = shareholders
     return treeData
+  }
+
+  /**
+   * 生成多个持股比例，确保总和为 100%
+   * @param {Number} count - 股东数量
+   * @returns {Array<Number>} 比例数组
+   */
+  static generateRatiosSum100(count) {
+    if (count === 1) {
+      return [100.00]
+    }
+
+    // 生成随机数
+    const randoms = []
+    let sum = 0
+    for (let i = 0; i < count; i++) {
+      const random = Math.random()
+      randoms.push(random)
+      sum += random
+    }
+
+    // 归一化到 100%
+    const ratios = randoms.map(r => {
+      const ratio = (r / sum) * 100
+      return parseFloat(ratio.toFixed(2))
+    })
+
+    // 修正舍入误差，确保总和精确为 100
+    const actualSum = ratios.reduce((a, b) => a + b, 0)
+    const diff = parseFloat((100 - actualSum).toFixed(2))
+    if (diff !== 0) {
+      ratios[0] = parseFloat((ratios[0] + diff).toFixed(2))
+    }
+
+    return ratios
   }
 }
 

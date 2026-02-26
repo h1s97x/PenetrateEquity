@@ -112,10 +112,14 @@ export class DataGenerator {
     if (depth === 0) return null
 
     const nodes = []
+    
+    // 生成持股比例，确保总和为 100%
+    const ratios = this.generateRatiosSum100(count)
+    
     for (let i = 0; i < count; i++) {
       const isPerson = Math.random() > 0.5
       const id = `${isPerson ? 'PERSON' : 'SHARE'}_L${level}_${i + 1}`
-      const ratio = this.generateRatio()
+      const ratio = ratios[i]
       
       const node = {
         id,
@@ -123,13 +127,14 @@ export class DataGenerator {
           ? NameGenerator.generatePersonName()
           : NameGenerator.generateCompanyName(),
         ratio: `${ratio}%`,
-        amount: `${Math.floor(Math.random() * 30000 + 500)}`,
+        amount: `${Math.floor(ratio * 1000)}`, // 金额与持股比例相关
         type: isPerson ? 1 : 2, // 1: 个人, 2: 企业
         companyCreditCode: isPerson ? '' : this.generateCreditCode(),
         companyCode: id,
         direction: 'upward',
         status: depth > 1 && !isPerson ? 1 : 0,
-        children: depth > 1 && !isPerson
+        // 修复：向上穿透应该使用 parents 而不是 children
+        parents: depth > 1 && !isPerson
           ? this.generateUpwardNodes(depth - 1, Math.max(1, count - 1), level + 1)
           : null
       }
@@ -141,12 +146,47 @@ export class DataGenerator {
   }
 
   /**
-   * 生成持股比例
+   * 生成持股比例（单个，随机）
    * @returns {String} 比例
    */
   static generateRatio() {
     const ratio = Math.random() * 100
     return ratio.toFixed(2)
+  }
+
+  /**
+   * 生成多个持股比例，确保总和为 100%
+   * @param {Number} count - 股东数量
+   * @returns {Array<Number>} 比例数组
+   */
+  static generateRatiosSum100(count) {
+    if (count === 1) {
+      return [100.00]
+    }
+
+    // 生成随机数
+    const randoms = []
+    let sum = 0
+    for (let i = 0; i < count; i++) {
+      const random = Math.random()
+      randoms.push(random)
+      sum += random
+    }
+
+    // 归一化到 100%
+    const ratios = randoms.map(r => {
+      const ratio = (r / sum) * 100
+      return parseFloat(ratio.toFixed(2))
+    })
+
+    // 修正舍入误差，确保总和精确为 100
+    const actualSum = ratios.reduce((a, b) => a + b, 0)
+    const diff = parseFloat((100 - actualSum).toFixed(2))
+    if (diff !== 0) {
+      ratios[0] = parseFloat((ratios[0] + diff).toFixed(2))
+    }
+
+    return ratios
   }
 
   /**
