@@ -3,14 +3,37 @@
     <div class="header">
       <h1>股权穿透图可视化系统</h1>
       <p class="subtitle">企业股权结构分析工具</p>
+      
+      <!-- Excel 导入入口 -->
+      <div class="action-buttons">
+        <button @click="goToImportHistory" class="btn-import-history">
+          <span class="icon">📚</span>
+          <span>导入历史</span>
+        </button>
+        <button @click="goToExcelImport" class="btn-excel-import">
+          <span class="icon">📥</span>
+          <span>导入 Excel 数据</span>
+        </button>
+      </div>
     </div>
 
-    <div class="company-list">
+    <!-- 有导入数据时显示公司列表 -->
+    <div v-if="importedCompanies.length > 0" class="company-list">
+      <div class="data-source-indicator">
+        <span class="indicator-icon">📊</span>
+        <span class="indicator-text">
+          当前显示：导入的数据 ({{ importedCompanies.length }} 家公司)
+        </span>
+        <button @click="goToExamples" class="btn-switch">
+          查看示例数据
+        </button>
+      </div>
+
       <div class="search-box">
         <input 
           v-model="searchKeyword" 
           type="text" 
-          placeholder="搜索公司名称或信用代码..."
+          placeholder="搜索公司名称或客户编号..."
           @input="handleSearch"
         />
         <span class="search-icon">🔍</span>
@@ -26,7 +49,7 @@
           <div class="company-icon">🏢</div>
           <div class="company-info">
             <h3 class="company-name">{{ company.name }}</h3>
-            <p class="company-code">{{ company.creditCode }}</p>
+            <p class="company-code">{{ company.clientCode }}</p>
             <div class="company-stats">
               <span class="stat-item">
                 <span class="stat-label">子公司：</span>
@@ -47,112 +70,124 @@
         <p>未找到匹配的公司</p>
       </div>
     </div>
+
+    <!-- 没有导入数据时显示空状态 -->
+    <div v-else class="empty-state-large">
+      <div class="empty-icon-large">📊</div>
+      <h2>欢迎使用股权穿透图系统</h2>
+      <p>请导入 Excel 数据开始使用，或查看示例数据了解功能</p>
+      <div class="empty-actions">
+        <button @click="goToExcelImport" class="btn-large btn-primary">
+          <span class="icon">📥</span>
+          <span>导入 Excel 数据</span>
+        </button>
+        <button @click="goToExamples" class="btn-large btn-secondary">
+          <span class="icon">👁️</span>
+          <span>查看示例数据</span>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ImportedDataService } from '@/services/importedDataService.js'
 
 const router = useRouter()
+const route = useRoute()
 const searchKeyword = ref('')
+const importedCompanies = ref([])
+const currentPage = ref(1)
+const pageSize = ref(50)
+const totalCompanies = ref(0)
+const loading = ref(false)
 
-// 模拟公司数据
-const companies = ref([
-  {
-    id: 1,
-    name: '京海控股集团有限公司',
-    creditCode: '91310000123456789X',
-    subsidiaryCount: 8,
-    shareholderCount: 3
-  },
-  {
-    id: 2,
-    name: '阿里巴巴集团控股有限公司',
-    creditCode: '91330000MA27XYZ123',
-    subsidiaryCount: 156,
-    shareholderCount: 12
-  },
-  {
-    id: 3,
-    name: '腾讯控股有限公司',
-    creditCode: '91440300MA5ABC1234',
-    subsidiaryCount: 234,
-    shareholderCount: 8
-  },
-  {
-    id: 4,
-    name: '字节跳动科技有限公司',
-    creditCode: '91110108MA01DEF567',
-    subsidiaryCount: 89,
-    shareholderCount: 15
-  },
-  {
-    id: 5,
-    name: '华为技术有限公司',
-    creditCode: '91440300618520018E',
-    subsidiaryCount: 178,
-    shareholderCount: 2
-  },
-  {
-    id: 6,
-    name: '小米科技有限责任公司',
-    creditCode: '91110108551385082Q',
-    subsidiaryCount: 67,
-    shareholderCount: 9
-  },
-  {
-    id: 7,
-    name: '美团科技有限公司',
-    creditCode: '91110108MA00GHI890',
-    subsidiaryCount: 45,
-    shareholderCount: 11
-  },
-  {
-    id: 8,
-    name: '京东集团股份有限公司',
-    creditCode: '91110000633674814D',
-    subsidiaryCount: 123,
-    shareholderCount: 7
-  },
-  {
-    id: 9,
-    name: '百度在线网络技术有限公司',
-    creditCode: '91110000802100433B',
-    subsidiaryCount: 98,
-    shareholderCount: 6
-  },
-  {
-    id: 10,
-    name: '网易（杭州）网络有限公司',
-    creditCode: '91330000MA27JKL456',
-    subsidiaryCount: 54,
-    shareholderCount: 5
-  }
-])
-
-// 搜索过滤
-const filteredCompanies = computed(() => {
-  if (!searchKeyword.value) {
-    return companies.value
-  }
-  
-  const keyword = searchKeyword.value.toLowerCase()
-  return companies.value.filter(company => 
-    company.name.toLowerCase().includes(keyword) ||
-    company.creditCode.toLowerCase().includes(keyword)
-  )
+onMounted(async () => {
+  await loadLatestImportedCompanies()
 })
 
-const handleSearch = () => {
-  // 搜索逻辑已在 computed 中处理
+// 加载最新导入的公司列表（优化版：支持分页）
+async function loadLatestImportedCompanies() {
+  loading.value = true
+  try {
+    const importList = await ImportedDataService.getImportedList()
+    
+    if (importList.length === 0) {
+      console.log('📭 没有导入数据')
+      loading.value = false
+      return
+    }
+
+    // 获取最新的导入数据
+    const latestImport = importList[0]
+    const result = await ImportedDataService.getCompaniesFromImport(latestImport.id, {
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      search: searchKeyword.value
+    })
+    
+    console.log('📦 加载公司列表:', result)
+    
+    importedCompanies.value = result.companies.map(company => ({
+      id: company.clientCode,
+      name: company.companyName,
+      creditCode: company.creditCode || '',
+      clientCode: company.clientCode,
+      subsidiaryCount: company.subsidiaryCount || 0,
+      shareholderCount: company.shareholderCount || 0
+    }))
+    
+    totalCompanies.value = result.total
+    console.log(`✅ 加载了 ${importedCompanies.value.length} 家公司，共 ${totalCompanies.value} 家`)
+  } catch (error) {
+    console.error('加载公司列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 跳转到示例数据页面
+function goToExamples() {
+  router.push({ name: 'ExampleCompanies' })
+}
+
+// 跳转到 Excel 导入页面
+function goToExcelImport() {
+  router.push({ name: 'ExcelImport' })
+}
+
+// 跳转到导入历史页面
+function goToImportHistory() {
+  router.push({ name: 'ImportHistory' })
+}
+
+// 搜索过滤（优化版：直接显示当前页数据）
+const filteredCompanies = computed(() => {
+  return importedCompanies.value
+})
+
+const handleSearch = async () => {
+  currentPage.value = 1
+  await loadLatestImportedCompanies()
+}
+
+// 加载更多
+async function loadMore() {
+  if (importedCompanies.value.length >= totalCompanies.value) {
+    return
+  }
+  currentPage.value++
+  await loadLatestImportedCompanies()
 }
 
 const viewCompany = (company) => {
   router.push({
-    name: 'EquityChart',
+    name: 'EquityChartView',
     query: {
       companyName: company.name,
+      companyCode: company.clientCode,
       creditCode: company.creditCode
     }
   })
@@ -182,7 +217,193 @@ const viewCompany = (company) => {
 .subtitle {
   font-size: 18px;
   opacity: 0.9;
-  margin: 0;
+  margin: 0 0 30px 0;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.btn-excel-import {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-excel-import:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  background: #f8f9ff;
+}
+
+.btn-excel-import .icon {
+  font-size: 20px;
+}
+
+.btn-import-history {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #764ba2;
+  border: 2px solid white;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-import-history:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  background: white;
+}
+
+.btn-import-history .icon {
+  font-size: 20px;
+}
+
+/* 数据源指示器 */
+.data-source-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.indicator-icon {
+  font-size: 24px;
+}
+
+.indicator-text {
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.btn-switch {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-switch:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+/* 空状态 - 大尺寸 */
+.empty-state-large {
+  max-width: 600px;
+  margin: 80px auto;
+  text-align: center;
+  color: white;
+  padding: 60px 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.empty-icon-large {
+  font-size: 120px;
+  margin-bottom: 30px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.empty-state-large h2 {
+  font-size: 32px;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.empty-state-large p {
+  font-size: 18px;
+  opacity: 0.9;
+  margin: 0 0 40px 0;
+  line-height: 1.6;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-large {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-large.btn-primary {
+  background: white;
+  color: #667eea;
+}
+
+.btn-large.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  background: #f8f9ff;
+}
+
+.btn-large.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+}
+
+.btn-large.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.btn-large .icon {
+  font-size: 24px;
 }
 
 .company-list {
