@@ -13,8 +13,10 @@
 
     <div class="chart-container">
       <EquityChart
+        :key="chartKey"
         :company-name="companyName"
         :company-credit-code="creditCode"
+        :company-code="companyCode"
         :height="chartHeight"
         :show-performance="false"
         @node-click="handleNodeClick"
@@ -57,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import EquityChart from '@/components/ui/EquityChart/index.vue'
 
@@ -66,17 +68,51 @@ const route = useRoute()
 
 const companyName = ref('')
 const creditCode = ref('')
+const companyCode = ref('')
 const selectedNode = ref(null)
 const chartHeight = ref(600)
+const chartKey = ref(0) // 用于强制重新渲染图表
+
+// 加载公司信息
+const loadCompanyInfo = () => {
+  companyName.value = route.query.companyName || '示例科技有限公司'
+  // 优先使用 companyCode（客户编号），其次使用 creditCode 或 companyCreditCode（信用代码）
+  companyCode.value = route.query.companyCode || route.query.clientCode || ''
+  creditCode.value = route.query.companyCreditCode || route.query.creditCode || ''
+  
+  // 更新 key 强制重新渲染
+  chartKey.value++
+  
+  console.log('📊 加载公司信息:', {
+    companyName: companyName.value,
+    companyCode: companyCode.value,
+    creditCode: creditCode.value,
+    chartKey: chartKey.value
+  })
+}
 
 onMounted(() => {
   // 从路由参数获取公司信息
-  companyName.value = route.query.companyName || '示例科技有限公司'
-  creditCode.value = route.query.creditCode || '91310000123456789X'
+  loadCompanyInfo()
   
   // 计算图表高度
   updateChartHeight()
   window.addEventListener('resize', updateChartHeight)
+})
+
+// 监听路由变化
+watch(() => route.query, (newQuery, oldQuery) => {
+  // 当路由参数变化时重新加载
+  if (newQuery.companyName !== oldQuery.companyName || 
+      newQuery.creditCode !== oldQuery.creditCode ||
+      newQuery.companyCode !== oldQuery.companyCode) {
+    console.log('🔄 路由参数变化，重新加载')
+    loadCompanyInfo()
+  }
+}, { deep: true })
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateChartHeight)
 })
 
 const updateChartHeight = () => {
@@ -88,6 +124,14 @@ const goBack = () => {
 }
 
 const handleNodeClick = (node) => {
+  console.log('🖱️ 节点点击事件:', {
+    name: node.name,
+    type: node.type,
+    companyCreditCode: node.companyCreditCode,
+    companyCode: node.companyCode,
+    id: node.id,
+    fullNode: node
+  })
   selectedNode.value = node
 }
 
@@ -96,16 +140,66 @@ const closeModal = () => {
 }
 
 const viewThisCompany = () => {
-  if (selectedNode.value && selectedNode.value.companyCreditCode) {
-    router.push({
-      name: 'EquityChart',
-      query: {
-        companyName: selectedNode.value.name,
-        creditCode: selectedNode.value.companyCreditCode
-      }
-    })
-    closeModal()
+  if (!selectedNode.value) {
+    console.warn('⚠️ 没有选中的节点')
+    return
   }
+  
+  // 先保存节点数据的副本，因为 closeModal 会清空 selectedNode
+  const nodeData = { ...selectedNode.value }
+  
+  console.log('🔍 准备查看公司:', nodeData)
+  
+  // 只有企业类型才能查看股权图
+  if (nodeData.type !== 2) {
+    console.warn('⚠️ 只有企业类型才能查看股权图')
+    alert('只有企业类型才能查看股权图')
+    return
+  }
+  
+  // 获取目标公司的客户编号（最准确的标识）
+  const targetCompanyCode = nodeData.companyCode || nodeData.id
+  
+  if (!targetCompanyCode) {
+    console.error('❌ 无法获取公司客户编号')
+    alert('无法获取公司标识，无法跳转')
+    return
+  }
+  
+  console.log('✅ 目标公司客户编号:', targetCompanyCode)
+  console.log('📍 当前公司客户编号:', companyCode.value)
+  
+  // 检查是否是当前公司（使用客户编号精确匹配）
+  if (targetCompanyCode === companyCode.value) {
+    console.warn('⚠️ 这就是当前公司，无需跳转')
+    alert('这就是当前公司')
+    closeModal()
+    return
+  }
+  
+  // 关闭弹窗
+  closeModal()
+  
+  // 构建新的查询参数
+  const newQuery = {
+    companyName: nodeData.name,
+    companyCode: targetCompanyCode,                    // 客户编号（优先）
+    companyCreditCode: nodeData.companyCreditCode,     // 信用代码
+    creditCode: nodeData.companyCreditCode,            // 兼容旧参数
+    t: Date.now() // 添加时间戳确保路由变化
+  }
+  
+  console.log('🚀 跳转参数:', newQuery)
+  
+  // 跳转到新的公司
+  router.push({
+    name: 'EquityChartView',
+    query: newQuery
+  }).then(() => {
+    console.log('✅ 路由跳转成功')
+  }).catch(err => {
+    console.error('❌ 路由跳转失败:', err)
+  })
 }
 </script>
 
