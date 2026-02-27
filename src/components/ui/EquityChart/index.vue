@@ -62,6 +62,10 @@ const props = defineProps({
     type: String,
     default: '示例科技有限公司'
   },
+  companyCode: {
+    type: String,
+    default: ''
+  },
   height: {
     type: Number,
     default: 600
@@ -102,6 +106,7 @@ const getData = async () => {
     const params = {
       companyCreditCode: props.companyCreditCode,
       companyName: props.companyName,
+      companyCode: props.companyCode,
       type: 0
     }
 
@@ -223,10 +228,17 @@ const handleCollapseAll = () => {
 }
 
 watch(() => props.companyName, () => {
+  console.log('📊 companyName 变化，重新加载数据')
   getData()
 })
 
 watch(() => props.companyCreditCode, () => {
+  console.log('📊 companyCreditCode 变化，重新加载数据')
+  getData()
+})
+
+watch(() => props.companyCode, () => {
+  console.log('📊 companyCode 变化，重新加载数据')
   getData()
 })
 

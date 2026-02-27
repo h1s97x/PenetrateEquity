@@ -48,6 +48,49 @@
 
 ## 🚀 快速开始
 
+### 在线使用
+
+访问在线演示: [https://h1s97x.github.io/PenetrateEquity/](https://h1s97x.github.io/PenetrateEquity/)
+
+### 本地开发
+
+```bash
+# 克隆项目
+git clone https://github.com/h1s97x/PenetrateEquity.git
+cd PenetrateEquity
+
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 访问 http://localhost:5173
+```
+
+### 内网部署
+
+如需部署到内网环境，请查看详细文档：
+
+- 📖 [内网部署完整指南](./docs/INTRANET-DEPLOYMENT.md)
+- 🔌 [离线部署指南（无网络环境）](./docs/OFFLINE-DEPLOYMENT.md) ⭐ 推荐
+- ⚡ [5分钟快速部署](./docs/QUICKSTART-INTRANET.md)
+
+或使用快速部署脚本：
+
+```bash
+# 在有网络的机器上准备离线部署包
+chmod +x prepare-offline.sh
+./prepare-offline.sh
+
+# Windows 用户
+prepare-offline.bat
+
+# 然后将生成的 offline-package 目录复制到内网服务器
+```
+
+## 🚀 快速开始
+
 ### 安装依赖
 
 ```bash
