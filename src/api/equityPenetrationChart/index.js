@@ -1,5 +1,7 @@
 import { DataGenerator } from '@/data/generators/dataGenerator.js'
 import { v2DataLoader } from '@/data/adapters/v2DataAdapter.js'
+import { ApiDataAdapter } from '@/data/adapters/apiDataAdapter.js'
+import { ImportedDataService } from '@/services/importedDataService.js'
 
 // API 缓存
 const apiCache = new Map()
@@ -19,9 +21,9 @@ const CURRENT_MODE = import.meta.env.VITE_DATA_MODE || DATA_MODE.GENERATOR
 console.log('当前数据模式:', CURRENT_MODE)
 
 /**
- * 不同公司的数据配置
+ * 示例公司的数据配置（用于 generator 模式）
  */
-const companyDataConfigs = {
+export const EXAMPLE_COMPANY_CONFIGS = {
   '91310000123456789X': {
     companyName: '京海控股集团有限公司',
     downwardDepth: 3,
@@ -131,6 +133,65 @@ export function clearCache() {
 }
 
 /**
+ * 使用真实 API 数据（从 IndexedDB 读取导入的数据）
+ */
+async function fetchRealApiData(params) {
+  try {
+    // 从 IndexedDB 获取最新的导入数据
+    const importList = await ImportedDataService.getImportedList()
+    
+    if (importList.length === 0) {
+      console.error('❌ 没有导入数据')
+      throw new Error('请先导入 Excel 数据')
+    }
+
+    // 获取最新的导入数据
+    const latestImport = importList[0]
+    const importedData = await ImportedDataService.getImportedData(latestImport.id)
+    
+    if (!importedData || !importedData.rawData) {
+      console.error('❌ 导入数据无效')
+      throw new Error('导入数据无效，请重新导入')
+    }
+
+    console.log('🌐 使用 API 模式（导入数据）')
+    console.log('📋 查询参数:', params)
+    
+    // 根据查询参数确定要查询的公司
+    // 优先使用 companyCode（客户编号），其次是 companyCreditCode（信用代码）
+    let rootClientCode = params.companyCode
+    let rootCompanyName = params.companyName
+    let rootCreditCode = params.companyCreditCode
+    
+    // 如果没有指定，使用第一个公司
+    if (!rootClientCode && !rootCompanyName && !rootCreditCode && importedData.allCompanies && importedData.allCompanies.length > 0) {
+      rootClientCode = importedData.allCompanies[0].clientCode
+      console.log('📌 使用第一个公司:', rootClientCode)
+    }
+
+    console.log('🔍 查找公司:', {
+      rootClientCode,
+      rootCompanyName,
+      rootCreditCode
+    })
+
+    // 使用 ApiDataAdapter 转换数据
+    const treeData = ApiDataAdapter.convertToApiResponse(importedData.rawData, {
+      rootClientCode: rootClientCode,
+      rootCompanyName: rootCompanyName,
+      rootCreditCode: rootCreditCode
+    })
+
+    console.log('✅ 成功生成树形数据:', treeData.retInfo.main.name)
+    return treeData
+  } catch (error) {
+    console.error('❌ API 模式加载失败:', error)
+    // 不再降级到生成器模式，直接抛出错误
+    throw error
+  }
+}
+
+/**
  * 使用 V2 实验数据
  */
 async function generateV2Data(params) {
@@ -174,7 +235,7 @@ function generateMockDataWithGenerator(params) {
   }
 
   // 获取公司配置
-  const config = companyDataConfigs[companyCreditCode] || {
+  const config = EXAMPLE_COMPANY_CONFIGS[companyCreditCode] || {
     companyName: companyName || '示例科技有限公司',
     downwardDepth: 3,
     upwardDepth: 2,
@@ -319,6 +380,14 @@ export async function getCompanyShareholder(params) {
     return mockData
   }
 
+  // API 模式：调用真实 API
+  if (CURRENT_MODE === DATA_MODE.API) {
+    console.log('🌐 使用真实 API 数据')
+    const apiData = await fetchRealApiData(params)
+    setCache(cacheKey, apiData)
+    return apiData
+  }
+
   return new Promise((resolve) => {
     setTimeout(() => {
       let mockData
@@ -327,9 +396,6 @@ export async function getCompanyShareholder(params) {
       if (CURRENT_MODE === DATA_MODE.GENERATOR) {
         console.log('🎲 使用数据生成器')
         mockData = generateMockDataWithGenerator(params)
-      } else if (CURRENT_MODE === DATA_MODE.API) {
-        console.log('🌐 使用真实 API (未实现，降级到模拟数据)')
-        mockData = generateSimpleMockData(params)
       } else {
         console.log('📝 使用简单模拟数据')
         mockData = generateSimpleMockData(params)
